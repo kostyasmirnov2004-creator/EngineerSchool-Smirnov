@@ -1,5 +1,4 @@
 import { ILayout } from "@docsvision/webclient/System/$Layout";
-import { Layout } from "@docsvision/webclient/System/Layout";
 import { CommonLogic } from "./CommonLogic";
 import { $MessageBox } from "@docsvision/webclient/System/$MessageBox";
 import { DirectoryDesignerRow } from "@docsvision/webclient/BackOffice/DirectoryDesignerRow";
@@ -9,7 +8,6 @@ import { $DepartmentController, $EmployeeController } from "@docsvision/webclien
 import { isEmptyGuid } from "@docsvision/webclient/System/GuidUtils";
 import { TextArea } from "@docsvision/webclient/Platform/TextArea";
 import { DateTimePicker } from "@docsvision/webclient/Platform/DateTimePicker";
-import { layoutManager } from "@docsvision/webclient/System/LayoutManager";
 
 export class ApplicationPurchaseEquipmentLogic extends CommonLogic {
     public async savingConfirmed(layout:ILayout): Promise<boolean> {
@@ -21,44 +19,77 @@ export class ApplicationPurchaseEquipmentLogic extends CommonLogic {
         }
     }
 
-    public async sendCardDataMsg(sender: TextArea, sender1: DirectoryDesignerRow) {
+    public async sendCardDataMsg(sender: TextArea) {
+        const layout = sender.layout;
+        
+        if (!layout) {
+            console.error("Layout not found");
+            return;
+        }
 
-        let name = sender.layout.controls.get<TextArea>("name").params.value;
-        let dateOfCreate = layoutManager.cardLayout.controls.get<DateTimePicker>("dateOfCreate").params.value;
-        let date_from = layoutManager.cardLayout.controls.get<DateTimePicker>("startDate").params.value;
-        let date_to = layoutManager.cardLayout.controls.get<DateTimePicker>("endDate").params.value;
-        let purpose = sender.layout.controls.get<TextArea>("purpose").params.value;
-        let dateOfCreate_str = dateOfCreate ? new Date(dateOfCreate).toLocaleDateString() : "";
-        let date_from_str = date_from ? new Date(date_from).toLocaleDateString() : "";
-        let date_to_str = date_to ? new Date(date_to).toLocaleDateString() : "";
-        let city = layoutManager.cardLayout.controls.get<DirectoryDesignerRow>("directoryDesignerRowCity").params.value.name;
+        try {
+            const nameCtrl = layout.controls.tryGet<TextArea>("name");
+            const dateOfCreateCtrl = layout.controls.tryGet<DateTimePicker>("dateOfCreate");
+            const startDateCtrl = layout.controls.tryGet<DateTimePicker>("startDate");
+            const endDateCtrl = layout.controls.tryGet<DateTimePicker>("endDate");
+            const purposeCtrl = layout.controls.tryGet<TextArea>("purpose");
+            const cityCtrl = layout.controls.tryGet<DirectoryDesignerRow>("directoryDesignerRowCity");
 
-        await sender.getService($MessageBox).showInfo(`Название: ${name}\nДата создания: ${dateOfCreate_str}\nДата с: ${date_from_str}\nДата по: ${date_to_str}\nОснование поездки: ${purpose}\nГород: ${city}`);
-    }
+            // Безопасное получение значений
+            const name = nameCtrl?.params.value || "не указано";
+            const dateOfCreate = dateOfCreateCtrl?.params.value;
+            const date_from = startDateCtrl?.params.value;
+            const date_to = endDateCtrl?.params.value;
+            const purpose = purposeCtrl?.params.value || "не указано";
+            
+            // Получение названия города
+            let city = cityCtrl?.params.value?.name || "не указан";
+
+
+            // Форматирование дат
+            const formatDate = (date: Date | null): string => {
+                return date ? new Date(date).toLocaleDateString('ru-RU') : "не указана";
+            };
+
+            const message = `Название: ${name}
+            Дата создания: ${formatDate(dateOfCreate)}
+            Дата с: ${formatDate(date_from)}
+            Дата по: ${formatDate(date_to)}
+            Основание поездки: ${purpose}
+            Город: ${city}`;
+
+            await layout.getService($MessageBox).showInfo(message);
+
+        } catch (error) {
+            console.error("Ошибка при получении данных карточки:", error);
+            await layout.getService($MessageBox).showError("Не удалось получить данные карточки");
+        }
+    }   
 
 
     public async checkChangeDate(sender: DateTimePicker) {
-    const dateFrom = sender.layout.controls.tryGet<DateTimePicker>("startDate").params.value; 
-    const dateTo = sender.layout.controls.tryGet<DateTimePicker>("endDate").params.value;
-    if (dateFrom && dateTo) {
-        if (dateFrom >= dateTo) {
-            await sender.layout.getService($MessageBox).showWarning("Дата 'с' должна быть меньше даты 'по'!");
-            sender.params.value = null;
+
+        const dateFrom = sender.layout.controls.tryGet<DateTimePicker>("startDate").params.value; 
+        const dateTo = sender.layout.controls.tryGet<DateTimePicker>("endDate").params.value;
+
+        if (dateFrom && dateTo) {
+            if (dateFrom >= dateTo) {
+                await sender.layout.getService($MessageBox).showWarning("Дата 'с' должна быть меньше даты 'по'!");
+                sender.params.value = null;
             }
         }
     }
 
-    public async preSaveCheck(layout:ILayout) {
+    public async preSaveCheck(layout: ILayout): Promise<boolean> {
 
-    let requiredCtrl = layout.controls.tryGet<TextArea>("name");
-
-    if (!requiredCtrl.params.value) {
-        await layout.getService($MessageBox).showWarning("Заполните поле 'название'");
-        return false;
-    }
-    else {
+        const requiredCtrl = layout.controls.tryGet<TextArea>("name");
+        
+        if (!requiredCtrl || !requiredCtrl.params.value || requiredCtrl.params.value.trim().length === 0) {
+            await layout.getService($MessageBox).showWarning("Заполните поле 'Название'");
+            return false;
+        }
+        
         return true;
-    }
     }
 
     public async sendSavingMsg(layout:ILayout) {

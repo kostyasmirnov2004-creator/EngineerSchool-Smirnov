@@ -20,7 +20,7 @@ export async function ddApplicationPurchaseEquipment_showCardData(sender: TextAr
   if (!sender) { return; }
   let logic = new ApplicationPurchaseEquipmentLogic();
 
-    await logic.sendCardDataMsg(sender, sender1);
+    await logic.sendCardDataMsg(sender);
 }
 
 /**
@@ -41,24 +41,28 @@ export async function ddApplicationPurchaseEquipment_onDataChanged(
  * @param args аргументы
  */
 export async function ddApplicationPurchaseEquipment_cardSaving(layout: ILayout, args: CancelableEventArgs<ICardSavingEventArgs>) {
-	if (!layout) { return; }
-	let logic = new ApplicationPurchaseEquipmentLogic();
+    if (!layout) { return; }
+    
+    let logic = new ApplicationPurchaseEquipmentLogic();
 
-     if (!await logic.preSaveCheck(layout)) {
+    if (!await logic.preSaveCheck(layout)) {
         args.cancel();
         return;
     }
 
-
-    args.wait();
-
     if (!await logic.savingConfirmed(layout)) {
         args.cancel();
         return;
-    } 
-    
-    await logic.sendSavingMsg(layout);
-    args.accept();
+    }
+
+    args.wait();
+
+    try {
+        await logic.sendSavingMsg(layout);
+        args.accept();
+    } catch (error) {
+        args.cancel(); // Отмена при ошибке
+    }
 }
 
 /**
