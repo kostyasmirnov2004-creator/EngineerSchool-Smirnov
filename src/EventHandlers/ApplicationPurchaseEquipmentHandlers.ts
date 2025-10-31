@@ -10,6 +10,7 @@ import { StaffDirectoryItems } from "@docsvision/webclient/BackOffice/StaffDirec
 import { DateTimePicker } from "@docsvision/webclient/Platform/DateTimePicker";
 import { TextArea } from "@docsvision/webclient/Platform/TextArea";
 
+
 /**
  * Событие нажатия на кнопку "Данные карточки"
  * @param sender контрол
